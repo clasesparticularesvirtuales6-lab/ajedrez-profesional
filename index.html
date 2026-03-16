@@ -22,7 +22,7 @@ input{padding:8px; margin:5px; width:200px;}
 
 <div id="login">
 <h2>Login</h2>
-<input id="loginUser" placeholder="Usuario"><br>
+<input id="loginUser" placeholder="Correo electrónico"><br>
 <input id="loginPass" type="password" placeholder="Contraseña"><br>
 <button onclick="login()">Entrar</button>
 <button onclick="showRegistro()">Registrarme</button>
@@ -31,7 +31,7 @@ input{padding:8px; margin:5px; width:200px;}
 
 <div id="registro">
 <h2>Registro</h2>
-<input id="regUser" placeholder="Usuario"><br>
+<input id="regUser" placeholder="Correo electrónico"><br>
 <input id="regPass" type="password" placeholder="Contraseña"><br>
 <button onclick="registrar()">Registrar</button>
 <button onclick="showLogin()">Volver</button>
@@ -50,33 +50,120 @@ input{padding:8px; margin:5px; width:200px;}
 <div id="ranking"></div>
 </div>
 
+<!-- JS Libraries -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chessground@8.0.0/dist/chessground.min.js"></script>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
 <script>
-const API = "https://script.google.com/macros/s/AKfycbxhsGLeSIcHUYyXpazup2MdTwlQ-uEqz7ZcuYj5gFm99-WAN9dRc-NJyeMPz1JHksnP/exec"; // reemplaza con la URL de tu Web App
-let player="", game=new Chess(), movimientos=0, cg;
+  // --- CONFIGURACIÓN DE FIREBASE ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyCCiIZ-LcUn1K6pbu6rdS_y_J897Cyv2Qs",
+    authDomain: "ajedrezprofesional-cbec4.firebaseapp.com",
+    projectId: "ajedrezprofesional-cbec4",
+    storageBucket: "ajedrezprofesional-cbec4.appspot.com",
+    messagingSenderId: "801842247281",
+    appId: "1:801842247281:web:a00157ec6c6cf887dd4dd0"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-document.addEventListener("DOMContentLoaded", showLogin);
+  let player="", game=new Chess(), movimientos=0, cg;
 
-function showLogin(){ document.getElementById("login").style.display="block"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="none"; }
-function showRegistro(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="block"; }
-function showGame(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="block"; }
+  document.addEventListener("DOMContentLoaded", showLogin);
 
-async function callScript(func,params=""){ const res = await fetch(`${API}?func=${func}&${params}`); return await res.text(); }
+  // --- UI Helpers ---
+  function showLogin(){ document.getElementById("login").style.display="block"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="none"; }
+  function showRegistro(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="block"; }
+  function showGame(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="block"; }
 
-async function registrar(){ let u=document.getElementById("regUser").value; let p=document.getElementById("regPass").value; let r=await callScript("registrarUsuario",`usuario=${u}&pass=${p}`); document.getElementById("msgReg").innerText=r=="OK"?"Registrado! Volvé a login.":"Usuario existe"; }
+  // --- REGISTRO ---
+  async function registrar(){
+    let u = document.getElementById("regUser").value;
+    let p = document.getElementById("regPass").value;
+    try{
+      await auth.createUserWithEmailAndPassword(u,p);
+      await db.collection("usuarios").doc(u).set({victorias:0,derrotas:0,empates:0,ranking:0});
+      alert("Usuario registrado. Ahora podés hacer login.");
+      showLogin();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
 
-async function login(){ let u=document.getElementById("loginUser").value; let p=document.getElementById("loginPass").value; let r=await callScript("validarLogin",`usuario=${u}&pass=${p}`); if(r=="INVALIDO"){document.getElementById("msgLogin").innerText="Credenciales incorrectas";} else{ player=u; document.getElementById("currentPlayer").innerText=player; showGame(); cargarRanking(); initChess(); } }
+  // --- LOGIN ---
+  async function login(){
+    let u = document.getElementById("loginUser").value;
+    let p = document.getElementById("loginPass").value;
+    try{
+      await auth.signInWithEmailAndPassword(u,p);
+      player = u;
+      document.getElementById("currentPlayer").innerText = player;
+      showGame();
+      cargarRanking();
+      initChess();
+    }catch(e){
+      alert("Error: " + e.message);
+    }
+  }
 
-async function cargarRanking(){ let data=await callScript("obtenerRanking",""); let arr=JSON.parse(data); let html="<ul>"; arr.sort((a,b)=>b[2]-a[2]); arr.forEach(u=>html+=`<li>${u[0]} 🏆 V:${u[2]} D:${u[3]} E:${u[4]} R:${u[5]}</li>`); html+="</ul>"; document.getElementById("ranking").innerHTML=html; }
+  // --- CARGAR RANKING ---
+  async function cargarRanking(){
+    let snapshot = await db.collection("usuarios").get();
+    let html="<ul>";
+    let arr = [];
+    snapshot.forEach(doc => {
+      let d = doc.data();
+      arr.push({usuario: doc.id, victorias:d.victorias, derrotas:d.derrotas, empates:d.empates, ranking:d.ranking});
+    });
+    arr.sort((a,b)=>b.victorias - a.victorias);
+    arr.forEach(u=> html += `<li>${u.usuario} 🏆 V:${u.victorias} D:${u.derrotas} E:${u.empates} R:${u.ranking}</li>`);
+    html += "</ul>";
+    document.getElementById("ranking").innerHTML = html;
+  }
 
-function initChess(){ game.reset(); movimientos=0; cg=Chessground(document.getElementById("board"),{draggable:true,orientation:'white',movable:{color:'white',events:{after:onMove}}}); document.getElementById("turno").innerText="Turno: Blancas"; document.getElementById("movimientos").innerText="Movs: 0"; document.getElementById("status").innerText="Estado del juego: en curso"; }
+  // --- INICIALIZAR TABLERO ---
+  function initChess(){
+    game.reset(); movimientos=0;
+    cg = Chessground(document.getElementById("board"), {
+      draggable:true,
+      orientation:'white',
+      movable:{color:'white',events:{after:onMove}}
+    });
+    document.getElementById("turno").innerText="Turno: Blancas";
+    document.getElementById("movimientos").innerText="Movs: 0";
+    document.getElementById("status").innerText="Estado del juego: en curso";
+  }
 
-function onMove(o,d){ let m=game.move({from:o,to:d,promotion:'q'}); if(!m){ cg.set({fen:game.fen()}); return;} movimientos++; document.getElementById("turno").innerText=`Turno: ${game.turn()=="w"?"Blancas":"Negras"}`; document.getElementById("movimientos").innerText=`Movs: ${movimientos}`; document.getElementById("status").innerText=game.in_checkmate()?"¡Jaque Mate!":game.in_draw()?"Empate":"En curso"; if(game.game_over()){ let result=game.in_checkmate()?"victoria":"empate"; callScript("actualizarStats",`usuario=${player}&resultado=${result}`); cargarRanking(); } }
+  // --- MOVIMIENTO ---
+  async function onMove(o,d){
+    let m = game.move({from:o,to:d,promotion:'q'});
+    if(!m){ cg.set({fen:game.fen()}); return; }
+    movimientos++;
+    document.getElementById("turno").innerText=`Turno: ${game.turn()=="w"?"Blancas":"Negras"}`;
+    document.getElementById("movimientos").innerText=`Movs: ${movimientos}`;
+    document.getElementById("status").innerText = game.in_checkmate()?"¡Jaque Mate!":game.in_draw()?"Empate":"En curso";
 
-function reiniciarPartida(){ initChess(); }
-function salir(){ location.reload(); }
+    if(game.game_over()){
+      let result = game.in_checkmate()?"victoria":"empate";
+      let docRef = db.collection("usuarios").doc(player);
+      let doc = await docRef.get();
+      if(doc.exists){
+        let data = doc.data();
+        if(result=="victoria"){ await docRef.update({victorias: data.victorias+1}); }
+        else { await docRef.update({empates: data.empates+1}); }
+      }
+      cargarRanking();
+    }
+  }
+
+  function reiniciarPartida(){ initChess(); }
+  function salir(){ location.reload(); }
 </script>
 
 </body>
