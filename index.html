@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Ajedrez Profesional Funcional</title>
+<title>Ajedrez Profesional Completo</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
 <style>
 body { background-color:#222; color:white; font-family:Arial,sans-serif; text-align:center; margin:0; padding:0;}
@@ -16,7 +16,7 @@ button:hover { background-color:#777; }
 </head>
 <body>
 
-<h1>Ajedrez Profesional Funcional</h1>
+<h1>Ajedrez Profesional Completo</h1>
 <div id="board"></div>
 <div id="info">
   <p id="status">Estado del juego: en curso</p>
@@ -26,100 +26,87 @@ button:hover { background-color:#777; }
   <button id="resetBtn">Reiniciar Partida</button>
 </div>
 
-<!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
 
 <script>
 document.addEventListener("DOMContentLoaded", function(){
 
-  // Inicializar juego
   var game = new Chess();
   var movimientos = 0;
   var clockWhite = 600;
   var clockBlack = 600;
 
-  // Inicializar tablero
   var board = Chessboard('board', {
-    draggable: true,
+    draggable:true,
     position: game.fen(),
-    onDragStart: function(source, piece, position, orientation){
+    onDragStart: function(source,piece,position,orientation){
       if(game.game_over()) return false;
       if((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
          (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
     },
-    onDrop: handleMove,
+    onDrop: function(source,target){
+      var move = game.move({from:source,to:target,promotion:'q'});
+      if(move===null) return 'snapback';
+      movimientos++;
+      updateStatus();
+      saveGame();
+    },
     onSnapEnd: function(){ board.position(game.fen()); },
-    pieceTheme: 'https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
+    pieceTheme:'https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
   });
 
-  // Función al mover piezas
-  function handleMove(source, target){
-    var move = game.move({from: source, to: target, promotion: 'q'});
-    if(move === null) return 'snapback';
-    movimientos++;
-    updateStatus();
-    saveGame();
-  }
-
-  // Actualizar estado
   function updateStatus(){
-    var status = '';
-    if(game.in_checkmate()){ status = '¡Jaque mate! Fin de la partida.'; }
-    else if(game.in_draw()){ status = 'Empate.'; }
-    else{ status = 'Juego en curso'; }
-    document.getElementById('status').innerText = status;
-    document.getElementById('turno').innerText = game.turn() === 'w' ? 'Turno: Blancas' : 'Turno: Negras';
-    document.getElementById('movimientos').innerText = 'Movimientos: ' + movimientos;
+    var status='';
+    if(game.in_checkmate()){ status='¡Jaque mate! Fin de la partida.'; }
+    else if(game.in_draw()){ status='Empate.'; }
+    else{ status='Juego en curso'; }
+    document.getElementById('status').innerText=status;
+    document.getElementById('turno').innerText=game.turn()==='w'?'Turno: Blancas':'Turno: Negras';
+    document.getElementById('movimientos').innerText='Movimientos: '+movimientos;
   }
 
-  // Guardar partida en localStorage
   function saveGame(){
-    localStorage.setItem('chessGame', game.fen());
-    localStorage.setItem('chessMoves', movimientos);
-    localStorage.setItem('clockWhite', clockWhite);
-    localStorage.setItem('clockBlack', clockBlack);
+    localStorage.setItem('chessGame',game.fen());
+    localStorage.setItem('chessMoves',movimientos);
+    localStorage.setItem('clockWhite',clockWhite);
+    localStorage.setItem('clockBlack',clockBlack);
   }
 
-  // Reiniciar partida
-  document.getElementById('resetBtn').addEventListener('click', function(){
+  document.getElementById('resetBtn').addEventListener('click',function(){
     game.reset();
     board.start();
-    movimientos = 0;
-    clockWhite = 600;
-    clockBlack = 600;
+    movimientos=0;
+    clockWhite=600;
+    clockBlack=600;
     localStorage.clear();
     updateStatus();
     updateClockDisplay();
   });
 
-  // Función de reloj
   function updateClockDisplay(){
-    var minW = Math.floor(clockWhite/60), secW = clockWhite%60;
-    var minB = Math.floor(clockBlack/60), secB = clockBlack%60;
-    document.getElementById('clockWhite').innerText = minW.toString().padStart(2,'0')+':'+secW.toString().padStart(2,'0');
-    document.getElementById('clockBlack').innerText = minB.toString().padStart(2,'0')+':'+secB.toString().padStart(2,'0');
+    var minW=Math.floor(clockWhite/60), secW=clockWhite%60;
+    var minB=Math.floor(clockBlack/60), secB=clockBlack%60;
+    document.getElementById('clockWhite').innerText=minW.toString().padStart(2,'0')+':'+secW.toString().padStart(2,'0');
+    document.getElementById('clockBlack').innerText=minB.toString().padStart(2,'0')+':'+secB.toString().padStart(2,'0');
   }
 
-  // Intervalo de reloj
   setInterval(function(){
     if(game.game_over()) return;
-    if(game.turn() === 'w'){ clockWhite--; if(clockWhite<0) clockWhite=0; }
+    if(game.turn()==='w'){ clockWhite--; if(clockWhite<0) clockWhite=0; }
     else{ clockBlack--; if(clockBlack<0) clockBlack=0; }
     updateClockDisplay();
     saveGame();
   },1000);
 
-  // Cargar partida guardada si existe
   if(localStorage.getItem('chessGame')){
     game.load(localStorage.getItem('chessGame'));
-    movimientos = parseInt(localStorage.getItem('chessMoves')) || 0;
-    clockWhite = parseInt(localStorage.getItem('clockWhite')) || 600;
-    clockBlack = parseInt(localStorage.getItem('clockBlack')) || 600;
+    movimientos=parseInt(localStorage.getItem('chessMoves'))||0;
+    clockWhite=parseInt(localStorage.getItem('clockWhite'))||600;
+    clockBlack=parseInt(localStorage.getItem('clockBlack'))||600;
     board.position(game.fen());
   }
 
-  // Inicializar
   updateStatus();
   updateClockDisplay();
 
