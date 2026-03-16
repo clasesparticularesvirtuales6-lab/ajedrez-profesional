@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <title>Ajedrez Profesional Funcional</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@8.0.0/dist/chessground.min.css">
 <style>
 body { background-color:#222; color:white; font-family:Arial,sans-serif; text-align:center; margin:0; padding:0;}
 h1 { margin-top:20px;}
-#board { width: 500px; margin: 20px auto; }
-button { padding:8px 20px; font-size:16px; cursor:pointer; border:none; border-radius:5px; background-color:#555; color:white; margin-top:10px; }
+#board { width: 500px; height: 500px; margin: 20px auto; }
+button { padding:10px 20px; font-size:16px; cursor:pointer; border:none; border-radius:5px; background-color:#555; color:white; margin-top:10px; }
 button:hover { background-color:#777; }
 #info { margin-top:15px; }
-#status, #turno, #movimientos, #clock { margin:5px 0; font-weight:bold; }
+#status, #turno, #movimientos { margin:5px 0; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -22,102 +22,64 @@ button:hover { background-color:#777; }
   <p id="status">Estado del juego: en curso</p>
   <p id="turno">Turno: Blancas</p>
   <p id="movimientos">Movimientos: 0</p>
-  <p id="clock">Blancas: <span id="clockWhite">10:00</span> | Negras: <span id="clockBlack">10:00</span></p>
   <button id="resetBtn">Reiniciar Partida</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chessground@8.0.0/dist/chessground.min.js"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
+// Inicializar juego
+const game = new Chess();
+let movimientos = 0;
 
-  // Inicializar juego
-  var game = new Chess();
-  var movimientos = 0;
-  var clockWhite = 600; // 10 min
-  var clockBlack = 600;
-
-  // Tablero
-  var board = Chessboard('board', {
-    draggable: true,
-    position: game.fen(),
-    onDragStart: function(source,piece,position,orientation){
-      if(game.game_over()) return false;
-      if((game.turn() === 'w' && piece.search(/^b/) !== -1) ||
-         (game.turn() === 'b' && piece.search(/^w/) !== -1)) return false;
-    },
-    onDrop: function(source,target){
-      var move = game.move({from: source, to: target, promotion:'q'});
-      if(move === null) return 'snapback';
-      movimientos++;
-      updateStatus();
-      saveGame();
-    },
-    onSnapEnd: function(){ board.position(game.fen()); },
-    pieceTheme:'https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/img/chesspieces/wikipedia/{piece}.png'
-  });
-
-  // Actualizar estado
-  function updateStatus(){
-    var status='';
-    if(game.in_checkmate()){ status='¡Jaque mate! Fin de la partida.'; }
-    else if(game.in_draw()){ status='Empate.'; }
-    else{ status='Juego en curso'; }
-    document.getElementById('status').innerText=status;
-    document.getElementById('turno').innerText= game.turn()==='w'?'Turno: Blancas':'Turno: Negras';
-    document.getElementById('movimientos').innerText='Movimientos: '+movimientos;
+// Configurar tablero
+const boardEl = document.getElementById("board");
+const board = Chessground(boardEl, {
+  orientation: 'white',
+  movable: {
+    free: false,
+    color: 'white',
+    events: {
+      after: onMove
+    }
   }
-
-  // Guardar partida local
-  function saveGame(){
-    localStorage.setItem('chessGame', game.fen());
-    localStorage.setItem('chessMoves', movimientos);
-    localStorage.setItem('clockWhite', clockWhite);
-    localStorage.setItem('clockBlack', clockBlack);
-  }
-
-  // Reiniciar partida
-  document.getElementById('resetBtn').addEventListener('click', function(){
-    game.reset();
-    board.start();
-    movimientos=0;
-    clockWhite=600;
-    clockBlack=600;
-    localStorage.clear();
-    updateStatus();
-    updateClockDisplay();
-  });
-
-  // Reloj
-  function updateClockDisplay(){
-    var minW = Math.floor(clockWhite/60), secW = clockWhite%60;
-    var minB = Math.floor(clockBlack/60), secB = clockBlack%60;
-    document.getElementById('clockWhite').innerText = minW.toString().padStart(2,'0') + ':' + secW.toString().padStart(2,'0');
-    document.getElementById('clockBlack').innerText = minB.toString().padStart(2,'0') + ':' + secB.toString().padStart(2,'0');
-  }
-
-  setInterval(function(){
-    if(game.game_over()) return;
-    if(game.turn()==='w'){ clockWhite--; if(clockWhite<0) clockWhite=0; }
-    else{ clockBlack--; if(clockBlack<0) clockBlack=0; }
-    updateClockDisplay();
-    saveGame();
-  },1000);
-
-  // Cargar partida guardada si existe
-  if(localStorage.getItem('chessGame')){
-    game.load(localStorage.getItem('chessGame'));
-    movimientos = parseInt(localStorage.getItem('chessMoves'))||0;
-    clockWhite = parseInt(localStorage.getItem('clockWhite'))||600;
-    clockBlack = parseInt(localStorage.getItem('clockBlack'))||600;
-    board.position(game.fen());
-  }
-
-  updateStatus();
-  updateClockDisplay();
-
 });
+
+// Función al mover piezas
+function onMove(orig, dest) {
+  const move = game.move({from: orig, to: dest, promotion: 'q'});
+  if(move === null) {
+    board.set({fen: game.fen()});
+    return;
+  }
+  movimientos++;
+  updateStatus();
+}
+
+// Actualizar estado
+function updateStatus() {
+  let status = '';
+  if(game.in_checkmate()) status = '¡Jaque mate! Fin de la partida.';
+  else if(game.in_draw()) status = 'Empate.';
+  else status = 'Juego en curso';
+  
+  document.getElementById('status').innerText = status;
+  document.getElementById('turno').innerText = game.turn() === 'w' ? 'Turno: Blancas' : 'Turno: Negras';
+  document.getElementById('movimientos').innerText = 'Movimientos: ' + movimientos;
+}
+
+// Reiniciar partida
+document.getElementById('resetBtn').addEventListener('click', function(){
+  game.reset();
+  movimientos = 0;
+  board.set({fen: game.fen(), turnColor: 'white'});
+  updateStatus();
+});
+
+// Inicializar
+board.set({fen: game.fen()});
+updateStatus();
 </script>
 
 </body>
