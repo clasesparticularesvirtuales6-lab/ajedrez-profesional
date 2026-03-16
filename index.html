@@ -22,11 +22,12 @@ input{padding:8px; margin:5px; width:200px;}
 
 <h1>Ajedrez Profesional Ultimate</h1>
 
+<!-- Verifica que estos IDs sean EXACTOS -->
 <div id="login">
 <h2>Login</h2>
 <input id="loginUser" placeholder="Correo electrónico"><br>
 <input id="loginPass" type="password" placeholder="Contraseña"><br>
-<button onclick="login()">Entrar</button> <!-- Asegúrate que este onclick es correcto -->
+<button onclick="login()">Entrar</button>
 <button onclick="showRegistro()">Registrarme</button>
 <p id="msgLogin"></p>
 </div>
@@ -65,12 +66,14 @@ input{padding:8px; margin:5px; width:200px;}
 <!-- <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script> -->
 
 <script>
+  console.log("-> Bloque de script principal iniciado."); // <--- NUEVO LOG AL INICIO DEL SCRIPT
+
   // --- CONFIGURACIÓN DE FIREBASE ---
   const firebaseConfig = {
     apiKey: "AIzaSyCCiIZ-LcUn1K6pbu6rdS_y_J897Cyv2Qs",
     authDomain: "ajedrezprofesional-cbec4.firebaseapp.com",
     projectId: "ajedrezprofesional-cbec4",
-    storageBucket: "ajedrezprofesional-cbec4.appspot.com",
+    storageBucket: "ajedrezprofesional-cbec4.appspot.com", // Compatible con versiones antiguas
     messagingSenderId: "801842247281",
     appId: "1:801842247281:web:a00157ec6c6cf887dd4dd0",
     // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
@@ -86,12 +89,24 @@ input{padding:8px; margin:5px; width:200px;}
   let player = "", game = new Chess(), movimientos = 0, cg;
 
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOM cargado"); // ESTE DEBE APARECER SIEMPRE QUE LA PÁGINA CARGA
+    console.log("-> Evento DOMContentLoaded disparado."); // <--- LOG CUANDO DOM ESTÁ LISTO
+    console.log("-> Llamando a showLogin().");
     showLogin();
   });
 
   // --- UI Helpers ---
-  function showLogin(){ document.getElementById("login").style.display="block"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="none"; }
+  function showLogin(){
+    console.log("-> Entrando en showLogin()."); // <--- LOG AL INICIO DE showLogin
+    const loginDiv = document.getElementById("login");
+    if (!loginDiv) {
+      console.error("ERROR: El elemento con ID 'login' no fue encontrado en el DOM."); // <--- VERIFICACIÓN CRÍTICA
+      return;
+    }
+    console.log("-> Elemento 'login' encontrado. Estableciendo display: block;");
+    loginDiv.style.display="block";
+    document.getElementById("registro").style.display="none";
+    document.getElementById("game").style.display="none";
+  }
   function showRegistro(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="block"; }
   function showGame(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="block"; }
 
@@ -101,14 +116,13 @@ input{padding:8px; margin:5px; width:200px;}
     let p = document.getElementById("regPass").value;
     try{
       const userCredential = await auth.createUserWithEmailAndPassword(u,p);
-      const userId = userCredential.user.uid; // Obtén el UID del usuario
-      // Usa el UID como ID del documento y guarda el email también para el ranking
+      const userId = userCredential.user.uid;
       await db.collection("usuarios").doc(userId).set({email: u, victorias:0,derrotas:0,empates:0,ranking:0});
       alert("Usuario registrado. Ahora podés hacer login.");
       // if (analytics) analytics.logEvent('sign_up', { method: 'email_password' });
       showLogin();
     }catch(e){
-      console.error("ERROR en registrar():", e.code, e.message); // Logging para registrar
+      console.error("ERROR en registrar():", e.code, e.message);
       alert("Error: " + e.message);
     }
   }
@@ -118,22 +132,31 @@ input{padding:8px; margin:5px; width:200px;}
     let u = document.getElementById("loginUser").value;
     let p = document.getElementById("loginPass").value;
 
-    console.log("Inicio de login(): Intentando iniciar sesión para usuario:", u); // Log 1
+    console.log("Inicio de login(): Intentando iniciar sesión para usuario:", u);
 
     try{
       const userCredential = await auth.signInWithEmailAndPassword(u,p);
-      console.log("Login exitoso. userCredential:", userCredential); // Log 2
+      console.log("Login exitoso. userCredential:", userCredential);
 
-      player = userCredential.user.uid; // Almacena el UID del usuario en 'player'
-      console.log("UID del jugador almacenado:", player); // Log 3
+      player = userCredential.user.uid;
+      console.log("UID del jugador almacenado:", player);
 
-      document.getElementById("currentPlayer").innerText = userCredential.user.email; // Muestra el email
-      console.log("Email del jugador mostrado:", userCredential.user.email); // Log 4
+      document.getElementById("currentPlayer").innerText = userCredential.user.email;
+      console.log("Email del jugador mostrado:", userCredential.user.email);
 
       // if (analytics) analytics.logEvent('login', { method: 'email_password' });
       
       showGame();
-      console.log("Función showGame() llamada."); // Log 5
+      console.log("Función showGame() llamada.");
 
-      await cargarRanking(); // Aseguramos que cargarRanking() termine antes de initChess()
-      console.log("Función cargarRanking()No hay respuesta
+      await cargarRanking();
+      console.log("Función cargarRanking() llamada y completada.");
+
+      setTimeout(() => {
+        initChess();
+        console.log("setTimeout para initChess() ejecutado.");
+      }, 200);
+
+    }catch(e){
+      console.error("ERROR en la función login():", e.code, e.message);
+      alert("ErrorNo hay respuesta
