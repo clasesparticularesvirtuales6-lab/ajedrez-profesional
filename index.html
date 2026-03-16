@@ -113,16 +113,39 @@ input{padding:8px; margin:5px; width:200px;}
   }
 
   // --- LOGIN ---
+    // --- LOGIN ---
   async function login(){
     let u = document.getElementById("loginUser").value;
     let p = document.getElementById("loginPass").value;
+
+    console.log("Inicio de login(): Intentando iniciar sesión para usuario:", u); // Log 1
+
     try{
       const userCredential = await auth.signInWithEmailAndPassword(u,p);
+      console.log("Login exitoso. userCredential:", userCredential); // Log 2
+
       player = userCredential.user.uid; // Almacena el UID del usuario en 'player'
+      console.log("UID del jugador almacenado:", player); // Log 3
+
       document.getElementById("currentPlayer").innerText = userCredential.user.email; // Muestra el email
-      // if (analytics) analytics.logEvent('login', { method: 'email_password' });
+      console.log("Email del jugador mostrado:", userCredential.user.email); // Log 4
+
+      // if (analytics) analytics.logEvent('login', { method: 'email_password' }); // Registrar evento de Analytics
+      
       showGame();
-      cargarRanking();
-      setTimeout(initChess, 200); // espera que el div #board se renderice
+      console.log("Función showGame() llamada."); // Log 5
+
+      await cargarRanking(); // Aseguramos que cargarRanking() termine antes de initChess()
+      console.log("Función cargarRanking() llamada y completada."); // Log 6
+
+      setTimeout(() => {
+        initChess();
+        console.log("setTimeout para initChess() ejecutado."); // Log 7
+      }, 200); // espera que el div #board se renderice
+
     }catch(e){
-      alert("Error: " +No hay respuesta
+      console.error("ERROR en la función login():", e.code, e.message); // Log de error detallado
+      alert("Error: " + e.message); // Mantener el alert, quizás ahora sí se muestre
+    }
+  }
+
