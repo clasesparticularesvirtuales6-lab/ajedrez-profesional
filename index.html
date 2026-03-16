@@ -26,7 +26,7 @@ input{padding:8px; margin:5px; width:200px;}
 <h2>Login</h2>
 <input id="loginUser" placeholder="Correo electrónico"><br>
 <input id="loginPass" type="password" placeholder="Contraseña"><br>
-<button onclick="login()">Entrar</button>
+<button onclick="login()">Entrar</button> <!-- Asegúrate que este onclick es correcto -->
 <button onclick="showRegistro()">Registrarme</button>
 <p id="msgLogin"></p>
 </div>
@@ -70,7 +70,7 @@ input{padding:8px; margin:5px; width:200px;}
     apiKey: "AIzaSyCCiIZ-LcUn1K6pbu6rdS_y_J897Cyv2Qs",
     authDomain: "ajedrezprofesional-cbec4.firebaseapp.com",
     projectId: "ajedrezprofesional-cbec4",
-    storageBucket: "ajedrezprofesional-cbec4.appspot.com", // Compatible con versiones antiguas
+    storageBucket: "ajedrezprofesional-cbec4.appspot.com",
     messagingSenderId: "801842247281",
     appId: "1:801842247281:web:a00157ec6c6cf887dd4dd0",
     // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
@@ -86,7 +86,7 @@ input{padding:8px; margin:5px; width:200px;}
   let player = "", game = new Chess(), movimientos = 0, cg;
 
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("DOM cargado");
+    console.log("DOM cargado"); // ESTE DEBE APARECER SIEMPRE QUE LA PÁGINA CARGA
     showLogin();
   });
 
@@ -108,12 +108,12 @@ input{padding:8px; margin:5px; width:200px;}
       // if (analytics) analytics.logEvent('sign_up', { method: 'email_password' });
       showLogin();
     }catch(e){
+      console.error("ERROR en registrar():", e.code, e.message); // Logging para registrar
       alert("Error: " + e.message);
     }
   }
 
-  // --- LOGIN ---
-    // --- LOGIN ---
+  // --- LOGIN (CON LOGGING DETALLADO) ---
   async function login(){
     let u = document.getElementById("loginUser").value;
     let p = document.getElementById("loginPass").value;
@@ -130,22 +130,10 @@ input{padding:8px; margin:5px; width:200px;}
       document.getElementById("currentPlayer").innerText = userCredential.user.email; // Muestra el email
       console.log("Email del jugador mostrado:", userCredential.user.email); // Log 4
 
-      // if (analytics) analytics.logEvent('login', { method: 'email_password' }); // Registrar evento de Analytics
+      // if (analytics) analytics.logEvent('login', { method: 'email_password' });
       
       showGame();
       console.log("Función showGame() llamada."); // Log 5
 
       await cargarRanking(); // Aseguramos que cargarRanking() termine antes de initChess()
-      console.log("Función cargarRanking() llamada y completada."); // Log 6
-
-      setTimeout(() => {
-        initChess();
-        console.log("setTimeout para initChess() ejecutado."); // Log 7
-      }, 200); // espera que el div #board se renderice
-
-    }catch(e){
-      console.error("ERROR en la función login():", e.code, e.message); // Log de error detallado
-      alert("Error: " + e.message); // Mantener el alert, quizás ahora sí se muestre
-    }
-  }
-
+      console.log("Función cargarRanking()No hay respuesta
