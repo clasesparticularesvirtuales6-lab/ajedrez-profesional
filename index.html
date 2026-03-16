@@ -146,23 +146,20 @@ input{padding:8px; margin:5px; width:200px;}
   }
 
   // --- INICIALIZAR TABLERO ---
-   function initChess(){
-    console.log("Tablero inicializado - Entrando en initChess()"); // <--- AÑADE ESTA LÍNEA
+     function initChess(){
     game.reset(); movimientos=0;
-    // console.log("Elemento #board:", document.getElementById("board")); // <--- OPCIONAL: Para verificar que el div existe
-    // console.log("Chessground objeto:", typeof Chessground); // <--- OPCIONAL: Para verificar si Chessground está definido
     cg = Chessground(document.getElementById("board"), {
       draggable:true,
       orientation:'white',
       movable:{color:'white',events:{after:onMove}}
     });
-    console.log("Chessground inicializado con éxito."); // <--- AÑADE ESTA LÍNEA
     document.getElementById("turno").innerText="Turno: Blancas";
     document.getElementById("movimientos").innerText=`Movs: ${movimientos}`;
     document.getElementById("status").innerText="Estado del juego: en curso";
     // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
     // if (analytics) analytics.logEvent('chess_game_start');
   }
+
 
 
   // --- MOVIMIENTO ---
