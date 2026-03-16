@@ -6,167 +6,77 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chessground@8.0.0/dist/chessground.min.css">
 <style>
 body { background:#222; color:white; font-family:Arial,sans-serif; text-align:center; }
-#login, #registro, #game { display:none; padding:20px; border-radius:10px; margin:20px auto; max-width:550px; }
-#login { background:#333; }
-#registro { background:#444; }
-#game { background:#555; }
-button { padding:10px 20px; margin:10px; cursor:pointer; border:none; border-radius:5px; }
-input { padding:8px; margin:5px; width:200px; }
-#board { width:500px; height:500px; margin:auto; }
-#ranking { margin-top:10px; text-align:left; display:inline-block; max-width:500px; }
+#login,#registro,#game{display:none; padding:20px; border-radius:10px; margin:20px auto; max-width:550px;}
+#login{background:#333;}
+#registro{background:#444;}
+#game{background:#555;}
+button{padding:10px 20px; margin:10px; cursor:pointer; border:none; border-radius:5px;}
+input{padding:8px; margin:5px; width:200px;}
+#board{width:500px;height:500px;margin:auto;}
+#ranking{margin-top:10px; text-align:left; display:inline-block; max-width:500px;}
 </style>
 </head>
 <body>
 
 <h1>Ajedrez Profesional Ultimate</h1>
 
-<!-- LOGIN -->
 <div id="login">
-  <h2>Login</h2>
-  <input id="loginUser" placeholder="Usuario"><br>
-  <input id="loginPass" type="password" placeholder="Contraseña"><br>
-  <button onclick="login()">Entrar</button>
-  <button onclick="showRegistro()">Registrarme</button>
-  <p id="msgLogin"></p>
+<h2>Login</h2>
+<input id="loginUser" placeholder="Usuario"><br>
+<input id="loginPass" type="password" placeholder="Contraseña"><br>
+<button onclick="login()">Entrar</button>
+<button onclick="showRegistro()">Registrarme</button>
+<p id="msgLogin"></p>
 </div>
 
-<!-- REGISTRO -->
 <div id="registro">
-  <h2>Registro</h2>
-  <input id="regUser" placeholder="Usuario"><br>
-  <input id="regPass" type="password" placeholder="Contraseña"><br>
-  <button onclick="registrar()">Registrar</button>
-  <button onclick="showLogin()">Volver</button>
-  <p id="msgReg"></p>
+<h2>Registro</h2>
+<input id="regUser" placeholder="Usuario"><br>
+<input id="regPass" type="password" placeholder="Contraseña"><br>
+<button onclick="registrar()">Registrar</button>
+<button onclick="showLogin()">Volver</button>
+<p id="msgReg"></p>
 </div>
 
-<!-- JUEGO -->
 <div id="game">
-  <p>Sesión: <span id="currentPlayer"></span></p>
-  <div id="board"></div>
-  <p id="status">Estado del juego: en curso</p>
-  <p id="turno">Turno: Blancas</p>
-  <p id="movimientos">Movs: 0</p>
-  <button onclick="reiniciarPartida()">Reiniciar Partida</button><br>
-  <button onclick="salir()">Cerrar Sesión</button>
-  <h3>RANKING GLOBAL</h3>
-  <div id="ranking"></div>
+<p>Sesión: <span id="currentPlayer"></span></p>
+<div id="board"></div>
+<p id="status">Estado del juego: en curso</p>
+<p id="turno">Turno: Blancas</p>
+<p id="movimientos">Movs: 0</p>
+<button onclick="reiniciarPartida()">Reiniciar Partida</button><br>
+<button onclick="salir()">Cerrar Sesión</button>
+<h3>RANKING GLOBAL</h3>
+<div id="ranking"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/1.0.0/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chessground@8.0.0/dist/chessground.min.js"></script>
 
 <script>
-// URL de tu Apps Script
-const API = "https://script.google.com/macros/s/AKfycbxhsGLeSIcHUYyXpazup2MdTwlQ-uEqz7ZcuYj5gFm99-WAN9dRc-NJyeMPz1JHksnP/exec";
+const API = "https://script.google.com/macros/s/AKfycbxhsGLeSIcHUYyXpazup2MdTwlQ-uEqz7ZcuYj5gFm99-WAN9dRc-NJyeMPz1JHksnP/exec"; // reemplaza con tu URL del Web App
+let player="", game=new Chess(), movimientos=0, cg;
 
-let player = "";
-let game = new Chess();
-let movimientos = 0;
-let cg;
-
-// Mostrar login al cargar la página
 document.addEventListener("DOMContentLoaded", showLogin);
 
-// UI Helpers
-function showLogin(){ 
-    document.getElementById("login").style.display="block"; 
-    document.getElementById("registro").style.display="none"; 
-    document.getElementById("game").style.display="none"; 
-}
-function showRegistro(){ 
-    document.getElementById("login").style.display="none"; 
-    document.getElementById("registro").style.display="block"; 
-}
-function showGame(){ 
-    document.getElementById("login").style.display="none"; 
-    document.getElementById("registro").style.display="none"; 
-    document.getElementById("game").style.display="block"; 
-}
+function showLogin(){ document.getElementById("login").style.display="block"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="none"; }
+function showRegistro(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="block"; }
+function showGame(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="block"; }
 
-// CALL SCRIPT
-async function callScript(func, params=""){
-  const url = `${API}?func=${func}&${params}`;
-  const res = await fetch(url);
-  return await res.text();
-}
+async function callScript(func,params=""){ const res = await fetch(`${API}?func=${func}&${params}`); return await res.text(); }
 
-// Registro
-async function registrar(){
-  let u = document.getElementById("regUser").value;
-  let p = document.getElementById("regPass").value;
-  let r = await callScript("registrarUsuario", `usuario=${u}&pass=${p}`);
-  document.getElementById("msgReg").innerText = r=="OK" ? "Registrado! Volvé a login." : "Usuario existe";
-}
+async function registrar(){ let u=document.getElementById("regUser").value; let p=document.getElementById("regPass").value; let r=await callScript("registrarUsuario",`usuario=${u}&pass=${p}`); document.getElementById("msgReg").innerText=r=="OK"?"Registrado! Volvé a login.":"Usuario existe"; }
 
-// Login
-async function login(){
-  let u = document.getElementById("loginUser").value;
-  let p = document.getElementById("loginPass").value;
-  let r = await callScript("validarLogin", `usuario=${u}&pass=${p}`);
-  if(r=="INVALIDO"){ 
-      document.getElementById("msgLogin").innerText="Credenciales incorrectas"; 
-  } else {
-      player = u;
-      document.getElementById("currentPlayer").innerText = player;
-      showGame();         // ahora #game es visible
-      cargarRanking();    
-      initChess();        // tablero se dibuja correctamente
-  }
-}
+async function login(){ let u=document.getElementById("loginUser").value; let p=document.getElementById("loginPass").value; let r=await callScript("validarLogin",`usuario=${u}&pass=${p}`); if(r=="INVALIDO"){document.getElementById("msgLogin").innerText="Credenciales incorrectas";} else{ player=u; document.getElementById("currentPlayer").innerText=player; showGame(); cargarRanking(); initChess(); } }
 
-// Ranking
-async function cargarRanking(){
-  let data = await callScript("obtenerRanking","");
-  let arr = JSON.parse(data);
-  let html="<ul>";
-  arr.sort((a,b)=>b[2]-a[2]);
-  arr.forEach(u=> html += `<li>${u[0]} 🏆 V:${u[2]} D:${u[3]} E:${u[4]} R:${u[5]}</li>`);
-  html += "</ul>";
-  document.getElementById("ranking").innerHTML = html;
-}
+async function cargarRanking(){ let data=await callScript("obtenerRanking",""); let arr=JSON.parse(data); let html="<ul>"; arr.sort((a,b)=>b[2]-a[2]); arr.forEach(u=>html+=`<li>${u[0]} 🏆 V:${u[2]} D:${u[3]} E:${u[4]} R:${u[5]}</li>`); html+="</ul>"; document.getElementById("ranking").innerHTML=html; }
 
-// Inicializar tablero
-function initChess(){
-  game.reset(); 
-  movimientos = 0;
-  cg = Chessground(document.getElementById("board"), {
-    draggable:true,
-    orientation:'white',
-    movable:{
-      color:'white',
-      events:{
-        after:onMove
-      }
-    }
-  });
-  document.getElementById("turno").innerText = "Turno: Blancas";
-  document.getElementById("movimientos").innerText = "Movs: 0";
-  document.getElementById("status").innerText = "Estado del juego: en curso";
-}
+function initChess(){ game.reset(); movimientos=0; cg=Chessground(document.getElementById("board"),{draggable:true,orientation:'white',movable:{color:'white',events:{after:onMove}}}); document.getElementById("turno").innerText="Turno: Blancas"; document.getElementById("movimientos").innerText="Movs: 0"; document.getElementById("status").innerText="Estado del juego: en curso"; }
 
-// Movimiento
-function onMove(o,d){
-  let m = game.move({from:o,to:d,promotion:'q'});
-  if(!m){ cg.set({fen:game.fen()}); return; }
-  movimientos++;
-  document.getElementById("turno").innerText = `Turno: ${game.turn()=="w"?"Blancas":"Negras"}`;
-  document.getElementById("movimientos").innerText = `Movs: ${movimientos}`;
-  document.getElementById("status").innerText = game.in_checkmate() ? "¡Jaque Mate!" : game.in_draw() ? "Empate" : "En curso";
+function onMove(o,d){ let m=game.move({from:o,to:d,promotion:'q'}); if(!m){ cg.set({fen:game.fen()}); return;} movimientos++; document.getElementById("turno").innerText=`Turno: ${game.turn()=="w"?"Blancas":"Negras"}`; document.getElementById("movimientos").innerText=`Movs: ${movimientos}`; document.getElementById("status").innerText=game.in_checkmate()?"¡Jaque Mate!":game.in_draw()?"Empate":"En curso"; if(game.game_over()){ let result=game.in_checkmate()?"victoria":"empate"; callScript("actualizarStats",`usuario=${player}&resultado=${result}`); cargarRanking(); } }
 
-  if(game.game_over()){
-    let result = game.in_checkmate() ? "victoria" : "empate";
-    callScript("actualizarStats", `usuario=${player}&resultado=${result}`);
-    cargarRanking();
-  }
-}
-
-// Reiniciar partida
 function reiniciarPartida(){ initChess(); }
-
-// Cerrar sesión
 function salir(){ location.reload(); }
-
 </script>
 
 </body>
