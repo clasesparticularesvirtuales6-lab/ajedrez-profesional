@@ -51,19 +51,16 @@ input{padding:8px; margin:5px; width:200px;}
 </div>
 
 <!-- JS Libraries -->
+<!-- VERSIÓN CORREGIDA DE CHESS.JS PARA COMPATIBILIDAD GLOBAL -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/chessground@8.0.0/dist/chessground.min.js"></script>
 
-<!-- Firebase -->
-<!-- ESTAS SON LAS LÍNEAS QUE NO SE PUEDEN CAMBIAR, SE MANTIENEN IGUAL -->
+<!-- Firebase SDK Compat (según lo solicitado) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<!-- SI QUIERES USAR Analytics CON EL SDK COMPAT, NECESITARÍAS ESTA LÍNEA ADICIONAL
-     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
-     Y luego inicializarlo con firebase.analytics();
--->
+<!-- DESCOMENTA LA SIGUIENTE LÍNEA SI QUIERES USAR FIREBASE ANALYTICS -->
+<!-- <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script> -->
 
 <script>
   // --- CONFIGURACIÓN DE FIREBASE ---
@@ -71,17 +68,19 @@ input{padding:8px; margin:5px; width:200px;}
     apiKey: "AIzaSyCCiIZ-LcUn1K6pbu6rdS_y_J897Cyv2Qs",
     authDomain: "ajedrezprofesional-cbec4.firebaseapp.com",
     projectId: "ajedrezprofesional-cbec4",
-    storageBucket: "ajedrezprofesional-cbec4.appspot.com", // Mantenemos .appspot.com si no podemos cambiar el código original
+    storageBucket: "ajedrezprofesional-cbec4.appspot.com", // Compatible con versiones antiguas
     messagingSenderId: "801842247281",
-    appId: "1:801842247281:web:a00157ec6c6cf887dd4dd0"
-    // measurementId: "G-DQ36DTG9X2" // Si se puede añadir, para Analytics
+    appId: "1:801842247281:web:a00157ec6c6cf887dd4dd0",
+    // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
+    // measurementId: "G-DQ36DTG9X2"
   };
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.firestore();
-  // const analytics = firebase.analytics(); // Si se añadió firebase-analytics-compat.js
+  // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
+  // const analytics = firebase.analytics();
 
-  // Ahora 'player' almacenará el UID del usuario autenticado
+  // 'player' almacenará el UID del usuario autenticado
   let player = "", game = new Chess(), movimientos = 0, cg;
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -104,7 +103,8 @@ input{padding:8px; margin:5px; width:200px;}
       // Usa el UID como ID del documento y guarda el email también para el ranking
       await db.collection("usuarios").doc(userId).set({email: u, victorias:0,derrotas:0,empates:0,ranking:0});
       alert("Usuario registrado. Ahora podés hacer login.");
-      // if (analytics) analytics.logEvent('sign_up', { method: 'email_password' }); // Registrar evento de Analytics si analytics está disponible
+      // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
+      // if (analytics) analytics.logEvent('sign_up', { method: 'email_password' });
       showLogin();
     }catch(e){
       alert("Error: " + e.message);
@@ -119,7 +119,8 @@ input{padding:8px; margin:5px; width:200px;}
       const userCredential = await auth.signInWithEmailAndPassword(u,p);
       player = userCredential.user.uid; // Almacena el UID del usuario en 'player'
       document.getElementById("currentPlayer").innerText = userCredential.user.email; // Muestra el email
-      // if (analytics) analytics.logEvent('login', { method: 'email_password' }); // Registrar evento de Analytics si analytics está disponible
+      // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
+      // if (analytics) analytics.logEvent('login', { method: 'email_password' });
       showGame();
       cargarRanking();
       setTimeout(initChess, 200); // espera que el div #board se renderice
@@ -133,9 +134,9 @@ input{padding:8px; margin:5px; width:200px;}
     const querySnapshot = await db.collection("usuarios").get();
     let html="<ul>";
     let arr = [];
-    querySnapshot.forEach(doc => { // Usamos 'doc' aquí, ya que no hay conflicto en la API compat
+    querySnapshot.forEach(doc => {
       let data = doc.data();
-      // Ahora usamos el campo 'email' del documento para mostrar el usuario en el ranking
+      // Usamos el campo 'email' del documento para mostrar el usuario en el ranking
       arr.push({usuario: data.email, victorias:data.victorias, derrotas:data.derrotas, empates:data.empates, ranking:data.ranking});
     });
     arr.sort((a,b)=>b.victorias - a.victorias);
@@ -155,48 +156,38 @@ input{padding:8px; margin:5px; width:200px;}
     document.getElementById("turno").innerText="Turno: Blancas";
     document.getElementById("movimientos").innerText=`Movs: ${movimientos}`;
     document.getElementById("status").innerText="Estado del juego: en curso";
-    // if (analytics) analytics.logEvent('chess_game_start'); // Registrar evento de Analytics si analytics está disponible
+    // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
+    // if (analytics) analytics.logEvent('chess_game_start');
   }
 
   // --- MOVIMIENTO ---
   async function onMove(o,d){
-    let m = game.move({from:o,to:d,promotion:'q'});
-    if(!m){ cg.set({fen:game.fen()}); return; }
+    // Debugging del movimiento
+    console.log("Intento de movimiento:", o, "->", d);
+    let m = game.move({from:o,to:d,promotion:'q'}); // chess.js lo evalúa
+    console.log("Resultado de game.move():", m);
+
+    if(!m){ // Si chess.js considera el movimiento inválido
+      console.log("Movimiento inválido según chess.js");
+      cg.set({fen:game.fen()}); // Restaura el tablero visual a la posición actual de game
+      return;
+    }
+
+    // Si el movimiento es válido
     movimientos++;
     document.getElementById("turno").innerText=`Turno: ${game.turn()=="w"?"Blancas":"Negras"}`;
     document.getElementById("movimientos").innerText=`Movs: ${movimientos}`;
     document.getElementById("status").innerText = game.in_checkmate()?"¡Jaque Mate!":game.in_draw()?"Empate":"En curso";
+    cg.set({fen:game.fen()}); // Actualiza el tablero visual después del movimiento válido
 
     if(game.game_over()){
       let result = game.in_checkmate()?"victoria":"empate";
-      // 'player' ahora es el UID, por lo que esto apunta al documento correcto
       const docRef = db.collection("usuarios").doc(player);
       const docSnap = await docRef.get();
       if(docSnap.exists){
         let data = docSnap.data();
         if(result=="victoria"){
             await docRef.update({victorias: data.victorias+1});
-            // if (analytics) analytics.logEvent('chess_game_end', { result: 'win' }); // Registrar evento de Analytics si analytics está disponible
-        } else if (result == "empate") {
-            await docRef.update({empates: data.empates+1});
-            // if (analytics) analytics.logEvent('chess_game_end', { result: 'draw' }); // Registrar evento de Analytics si analytics está disponible
-        }
-      }
-      cargarRanking();
-    }
-  }
-
-  function reiniciarPartida(){
-    initChess();
-    // if (analytics) analytics.logEvent('chess_game_restart'); // Registrar evento de Analytics si analytics está disponible
-  }
-  function salir(){
-    auth.signOut(); // Cerrar sesión de Firebase Authentication
-    location.reload();
-    // if (analytics) analytics.logEvent('logout'); // Registrar evento de Analytics si analytics está disponible
-  }
-
-</script>
-
-</body>
-</html>
+            // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
+            // if (analytics) analytics.logEvent('chess_game_end', { result: 'win' });
+No hay respuesta
