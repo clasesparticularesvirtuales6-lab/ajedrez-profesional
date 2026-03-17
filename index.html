@@ -58,84 +58,113 @@ input{padding:8px; margin:5px; width:200px;}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chessground@8.0.0/dist/chessground.min.js"></script>
 
-<!-- Firebase SDK Compat -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-<!-- DESCOMENTA LA SIGUIENTE LÍNEA SI QUIERES USAR FIREBASE ANALYTICS -->
-<!-- <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script> -->
-
-<script>
+<!-- Firebase SDK Modulares (¡MEJORADO!) -->
+<!-- Asegúrate de usar type="module" para las importaciones modulares -->
+<script type="module">
   console.log("-> Bloque de script principal iniciado."); // <--- NUEVO LOG AL INICIO DEL SCRIPT
+
+  // --- Importaciones Modulares de Firebase ---
+  // Importa las funciones específicas que necesitas de cada módulo de Firebase.
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js';
+  import { getFirestore, collection, doc, setDoc, getDocs, query, orderBy } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js';
+  // DESCOMENTA LA SIGUIENTE LÍNEA SI QUIERES USAR FIREBASE ANALYTICS
+  // import { getAnalytics, logEvent } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics.js';
 
   // --- CONFIGURACIÓN DE FIREBASE ---
   const firebaseConfig = {
     apiKey: "AIzaSyCCiIZ-LcUn1K6pbu6rdS_y_J897Cyv2Qs",
     authDomain: "ajedrezprofesional-cbec4.firebaseapp.com",
     projectId: "ajedrezprofesional-cbec4",
-    storageBucket: "ajedrezprofesional-cbec4.appspot.com", // Compatible con versiones antiguas
+    storageBucket: "ajedrezprofesional-cbec4.appspot.com",
     messagingSenderId: "801842247281",
     appId: "1:801842247281:web:a00157ec6c6cf887dd4dd0",
-    // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
-    // measurementId: "G-DQ36DTG9X2"
+    // DESCOMENTA LA SIGUIENTE LÍNEA Y AGREGA TU measurementId si usas Analytics
+    measurementId: "G-DQ36DTG9X2" // Tu Measurement ID de Google Analytics
   };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+
+  // Inicializa Firebase y sus servicios (¡Modular!)
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
   // DESCOMENTA LA SIGUIENTE LÍNEA SI USAS FIREBASE ANALYTICS
-  // const analytics = firebase.analytics();
+  // const analytics = getAnalytics(app);
 
   // 'player' almacenará el UID del usuario autenticado
   let player = "", game = new Chess(), movimientos = 0, cg;
 
   document.addEventListener("DOMContentLoaded", () => {
-    console.log("-> Evento DOMContentLoaded disparado."); // <--- LOG CUANDO DOM ESTÁ LISTO
+    console.log("-> Evento DOMContentLoaded disparado.");
     console.log("-> Llamando a showLogin().");
     showLogin();
+
+    // Listener de estado de autenticación (MEJORA: para mantener la sesión)
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        console.log("-> Usuario ya autenticado:", user.email);
+        player = user.uid;
+        document.getElementById("currentPlayer").innerText = user.email;
+        showGame();
+        cargarRanking();
+        setTimeout(() => {
+          initChess();
+        }, 200);
+      } else {
+        console.log("-> No hay usuario autenticado.");
+        showLogin();
+      }
+    });
   });
 
   // --- UI Helpers ---
   function showLogin(){
-    console.log("-> Entrando en showLogin()."); // <--- LOG AL INICIO DE showLogin
-    const loginDiv = document.getElementById("login");
-    if (!loginDiv) {
-      console.error("ERROR: El elemento con ID 'login' no fue encontrado en el DOM."); // <--- VERIFICACIÓN CRÍTICA
-      return;
-    }
-    console.log("-> Elemento 'login' encontrado. Estableciendo display: block;");
-    loginDiv.style.display="block";
+    console.log("-> Entrando en showLogin().");
+    document.getElementById("login").style.display="block";
     document.getElementById("registro").style.display="none";
     document.getElementById("game").style.display="none";
+    document.getElementById("msgLogin").innerText = ""; // Limpiar mensajes de error previos
   }
-  function showRegistro(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="block"; }
-  function showGame(){ document.getElementById("login").style.display="none"; document.getElementById("registro").style.display="none"; document.getElementById("game").style.display="block"; }
+  function showRegistro(){
+    document.getElementById("login").style.display="none";
+    document.getElementById("registro").style.display="block";
+    document.getElementById("msgReg").innerText = ""; // Limpiar mensajes de error previos
+  }
+  function showGame(){
+    document.getElementById("login").style.display="none";
+    document.getElementById("registro").style.display="none";
+    document.getElementById("game").style.display="block";
+  }
 
-  // --- REGISTRO ---
-  async function registrar(){
+  // --- REGISTRO (¡Modularizado!) ---
+  window.registrar = async function(){ // Hacer la función global para que onclick la encuentre
     let u = document.getElementById("regUser").value;
     let p = document.getElementById("regPass").value;
+    document.getElementById("msgReg").innerText = ""; // Limpiar mensajes
+
     try{
-      const userCredential = await auth.createUserWithEmailAndPassword(u,p);
+      const userCredential = await createUserWithEmailAndPassword(auth, u, p); // Función modular
       const userId = userCredential.user.uid;
-      await db.collection("usuarios").doc(userId).set({email: u, victorias:0,derrotas:0,empates:0,ranking:0});
+      // Usar setDoc para Firestore modular
+      await setDoc(doc(db, "usuarios", userId), {email: u, victorias:0,derrotas:0,empates:0,ranking:0});
       alert("Usuario registrado. Ahora podés hacer login.");
-      // if (analytics) analytics.logEvent('sign_up', { method: 'email_password' });
+      // if (analytics) logEvent(analytics, 'sign_up', { method: 'email_password' }); // Analytics modular
       showLogin();
     }catch(e){
       console.error("ERROR en registrar():", e.code, e.message);
-      alert("Error: " + e.message);
+      document.getElementById("msgReg").innerText = "Error: " + e.message;
     }
   }
 
-  // --- LOGIN (CON LOGGING DETALLADO) ---
-  async function login(){
+  // --- LOGIN (CON LOGGING DETALLADO Y MANEJO DE ERRORES MEJORADO) ---
+  window.login = async function(){ // Hacer la función global para que onclick la encuentre
     let u = document.getElementById("loginUser").value;
     let p = document.getElementById("loginPass").value;
+    document.getElementById("msgLogin").innerText = ""; // Limpiar mensajes
 
     console.log("Inicio de login(): Intentando iniciar sesión para usuario:", u);
 
     try{
-      const userCredential = await auth.signInWithEmailAndPassword(u,p);
+      const userCredential = await signInWithEmailAndPassword(auth, u, p); // Función modular
       console.log("Login exitoso. userCredential:", userCredential);
 
       player = userCredential.user.uid;
@@ -144,8 +173,8 @@ input{padding:8px; margin:5px; width:200px;}
       document.getElementById("currentPlayer").innerText = userCredential.user.email;
       console.log("Email del jugador mostrado:", userCredential.user.email);
 
-      // if (analytics) analytics.logEvent('login', { method: 'email_password' });
-      
+      // if (analytics) logEvent(analytics, 'login', { method: 'email_password' }); // Analytics modular
+
       showGame();
       console.log("Función showGame() llamada.");
 
@@ -159,4 +188,76 @@ input{padding:8px; margin:5px; width:200px;}
 
     }catch(e){
       console.error("ERROR en la función login():", e.code, e.message);
-      alert("ErrorNo hay respuesta
+      document.getElementById("msgLogin").innerText = "Error al iniciar sesión: " + e.message; // Mensaje de error visible
+    }
+  }
+
+  // --- SALIR (Cerrar Sesión) ---
+  window.salir = async function() {
+    try {
+      await signOut(auth); // Función modular para cerrar sesión
+      console.log("Sesión cerrada correctamente.");
+      player = ""; // Limpiar el UID del jugador
+      showLogin(); // Mostrar la pantalla de login
+      // location.reload(); // Opcional: recargar la página si es necesario
+    } catch (e) {
+      console.error("ERROR al cerrar sesión:", e.message);
+      alert("Error al cerrar sesión: " + e.message);
+    }
+  }
+
+  // --- CARGAR RANKING (Ejemplo con Firestore modular) ---
+  window.cargarRanking = async function() {
+    console.log("-> Cargando ranking...");
+    const rankingDiv = document.getElementById("ranking");
+    rankingDiv.innerHTML = "Cargando...";
+
+    try {
+      const q = query(collection(db, "usuarios"), orderBy("ranking", "desc")); // Consulta modular
+      const querySnapshot = await getDocs(q); // Obtener documentos modular
+
+      let rankingHTML = "<ul>";
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        rankingHTML += `<li>${data.email} - Ranking: ${data.ranking} (V:${data.victorias} D:${data.derrotas} E:${data.empates})</li>`;
+      });
+      rankingHTML += "</ul>";
+      rankingDiv.innerHTML = rankingHTML;
+      console.log("-> Ranking cargado exitosamente.");
+    } catch (e) {
+      console.error("ERROR al cargar el ranking:", e.message);
+      rankingDiv.innerHTML = "Error al cargar el ranking.";
+    }
+  }
+
+  // --- FUNCIONES DE AJEDREZ (Necesitarías definirlas, estas son placeholders) ---
+  // cg es tu instancia de Chessground, game es tu instancia de chess.js
+  function initChess() {
+    console.log("-> Inicializando el tablero de ajedrez (initChess)...");
+    const board = document.getElementById("board");
+    if (board && typeof Chessground === 'function') {
+      cg = Chessground(board, {
+        movable: {
+          free: false,
+          color: 'white', // Color que puede mover al inicio
+          showDests: true,
+          events: {
+            after: onMove // Función que se ejecuta después de cada movimiento
+          }
+        },
+        draggable: {
+          showGhost: true
+        }
+      });
+      // Inicializar Chess.js con la posición de inicio
+      game.reset();
+      cg.set({ fen: game.fen() });
+      updateStatus();
+    } else {
+      console.error("ERROR: No se encontró el elemento 'board' o Chessground no está cargado.");
+    }
+  }
+
+  // Función que se llama después de un movimiento en Chessground
+  function onMove(orig, dest) {
+    const move = game.move({ from: orig, to:No hay respuesta
